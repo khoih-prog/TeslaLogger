@@ -36,6 +36,7 @@ namespace TeslaLogger
         public Dictionary<SpecialFlags, string> specialFlags;
         private bool isHome = false;
         private bool isWork = false;
+        private bool isCharger = false;
         internal GeofenceSource geofenceSource;
 
         public bool IsHome
@@ -49,6 +50,7 @@ namespace TeslaLogger
                 }
             }
         }
+
         public bool IsWork
         {
             get => isWork; set
@@ -60,6 +62,8 @@ namespace TeslaLogger
                 }
             }
         }
+
+        public bool IsCharger { get => isCharger; set { isCharger = value; } }
 
         public Address(string name, double lat, double lng, int radius, GeofenceSource source = GeofenceSource.Geofence)
         {
@@ -222,6 +226,19 @@ namespace TeslaLogger
                                 Logfile.Log("GeofencePrivate: Address inserted: " + args[0]);
                             }
 
+                            if (addr.name.StartsWith("Supercharger-V3 ") || addr.name.StartsWith("Ionity "))
+                            {
+                                addr.name = "⚡⚡⚡ " + addr.name;
+                            }
+                            else if (addr.name.StartsWith("Supercharger "))
+                            {
+                                addr.name = "⚡⚡ " + addr.name;
+                            }
+                            else if (addr.name.StartsWith("Urbancharger "))
+                            {
+                                addr.name = "⚡ " + addr.name;
+                            }
+
                             localList.Add(addr);
                         }
                         catch (Exception ex)
@@ -337,10 +354,17 @@ namespace TeslaLogger
                 else if (flag.Equals("home"))
                 {
                     _addr.IsHome = true;
+                    _addr.name = "🏠 " + _addr.name;
                 }
                 else if (flag.Equals("work"))
                 {
                     _addr.IsWork = true;
+                    _addr.name = "💼 " + _addr.name;
+                }
+                else if (flag.Equals("charger"))
+                {
+                    _addr.IsCharger = true;
+                    _addr.name = "🔌 " + _addr.name;
                 }
                 else if (flag.StartsWith("scl"))
                 {
