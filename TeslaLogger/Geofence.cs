@@ -30,6 +30,7 @@ namespace TeslaLogger
         }
 
         public string name;
+        public string rawName;
         public double lat;
         public double lng;
         public int radius;
@@ -68,6 +69,7 @@ namespace TeslaLogger
         public Address(string name, double lat, double lng, int radius, GeofenceSource source = GeofenceSource.Geofence)
         {
             this.name = name;
+            this.rawName = name;
             this.lat = lat;
             this.lng = lng;
             this.radius = radius;
@@ -461,7 +463,7 @@ namespace TeslaLogger
             }
         }
 
-        public Address GetPOI(double lat, double lng, bool logDistance = true)
+        public Address GetPOI(double lat, double lng, bool logDistance = true, string brand = null, int max_power = 0)
         {
             Address ret = null;
             double retDistance = 0;
@@ -487,6 +489,15 @@ namespace TeslaLogger
                         double distance = GetDistance(lng, lat, p.lng, p.lat);
                         if (p.radius > distance)
                         {
+                            if (brand == "Tesla")
+                            {
+                                if (!p.name.Contains("Tesla") && !p.name.Contains("Supercharger"))
+                                    continue;
+
+                                if (max_power > 150 && !p.name.Contains("V3"))
+                                    continue;
+                            }
+
                             found++;
                             if (logDistance)
                             {

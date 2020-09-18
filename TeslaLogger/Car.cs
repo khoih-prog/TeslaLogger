@@ -1147,7 +1147,7 @@ namespace TeslaLogger
                     $"  AND chargingstate.cost_total IS NOT NULL " +
                     $"  AND chargingstate.cost_kwh_meter_invoice IS NULL " +
                     $"  AND chargingstate.cost_idle_fee_total IS NULL " +
-                    $"  AND CarID = {CarInDB}" +
+                    $"  AND chargingstate.CarID = {CarInDB}" +
                     $" ORDER BY id DESC " +
                     $" LIMIT 1", con);
                 Tools.DebugLog("SQL:" + cmd.CommandText);
@@ -1184,7 +1184,7 @@ $"WHERE " +
 $"  chargingstate.pos = pos.id " +
 $"  AND pos.address = '{_addr.name}' " +
 $"  AND chargingstate.cost_total IS NULL " +
-$"  AND CarID = {CarInDB}" +
+$"  AND chargingstate.CarID = {CarInDB}" +
 $" ORDER BY id DESC " +
 $" LIMIT 1", con);
                     Tools.DebugLog("SQL:" + cmd.CommandText);
@@ -1270,6 +1270,7 @@ $"  AND CarID = {CarInDB}", con);
 
         public bool IsParked()
         {
+            // online and parked
             if (teslaAPIState.GetString("state", out string state) && state.Equals("online")
                 && (teslaAPIState.GetString("shift_state", out string shift_state)
                     && (shift_state.Equals("P") || shift_state.Equals("undef")))
@@ -1277,6 +1278,11 @@ $"  AND CarID = {CarInDB}", con);
             { 
                 return true;
             }
+            // asleep
+            if (teslaAPIState.GetString("state", out state) && state.Equals("asleep"))
+            {
+                return true;
+            }    
             return false;
         }
 

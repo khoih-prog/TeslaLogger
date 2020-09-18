@@ -225,6 +225,34 @@ namespace TeslaLogger
             }
         }
 
+        internal static void UpdateCarIDNull()
+        {
+            string[] tables = { "can", "car_version", "charging", "chargingstate", "drivestate", "pos", "shiftstate", "state" };
+            foreach (string table in tables) {
+                try
+                {
+                    int rows = 0;
+                    int t = Environment.TickCount;
+                    using (MySqlConnection con = new MySqlConnection(DBConnectionstring))
+                    {
+                        con.Open();
+                        MySqlCommand cmd = new MySqlCommand($"update {table} set carid = 1 where carid is null", con);
+                        cmd.CommandTimeout = 6000;
+                        rows = cmd.ExecuteNonQuery();
+                    }
+                    t = Environment.TickCount - t;
+
+                    if (rows > 0)
+                        Logfile.Log($"update {table} set carid = 1 where carid is null; ms: {t} / Rows: {rows}");
+
+                }
+                catch (Exception ex)
+                {
+                    Logfile.Log(ex.ToString());
+                }
+            }
+        }
+
         internal void UpdateTeslaToken()
         {
             try
@@ -384,6 +412,9 @@ namespace TeslaLogger
             car.currentJSON.current_charge_rate_km = 0;
 
             UpdateMaxChargerPower();
+            
+            // As charging point name is depending on the max charger power, it will be updated after "MaxChargerPower" was computed
+            car.webhelper.UpdateLastChargingAdress();
 
             Task.Factory.StartNew(() => CheckForInterruptedCharging(false));
         }
@@ -515,21 +546,23 @@ namespace TeslaLogger
 
         internal static void UpdateAllChargingMaxPower()
         {
-            /* TODO
             try
             {
                 using (MySqlConnection con = new MySqlConnection(DBConnectionstring))
                 {
                     con.Open();
-                    MySqlCommand cmd = new MySqlCommand("select id, StartChargingID, EndChargingID from chargingstate where max_charger_power is null", con);
+                    MySqlCommand cmd = new MySqlCommand("select id, StartChargingID, EndChargingID, CarId from chargingstate where max_charger_power is null", con);
                     MySqlDataReader dr = cmd.ExecuteReader();
                     while (dr.Read())
                     {
                         int id = Convert.ToInt32(dr["id"]);
                         int StartChargingID = Convert.ToInt32(dr["StartChargingID"]);
                         int EndChargingID = Convert.ToInt32(dr["EndChargingID"]);
+                        int carid = dr["CarId"] as Int32? ?? 1;
 
-                        UpdateMaxChargerPower(id, StartChargingID, EndChargingID);
+                        Car c = Car.GetCarByID(carid);
+                        if (c!= null)
+                            c.dbHelper.UpdateMaxChargerPower(id, StartChargingID, EndChargingID);
                     }
                 }
             }
@@ -537,7 +570,6 @@ namespace TeslaLogger
             {
                 Logfile.Log(ex.Message);
             }
-            */
         }
 
         internal void GetLastTrip()
@@ -630,6 +662,7 @@ namespace TeslaLogger
 
         public void StartChargingState(WebHelper wh)
         {
+            Tools.DebugLog($"DBHelper.StartChargingState()");
             using (MySqlConnection con = new MySqlConnection(DBConnectionstring))
             {
                 con.Open();

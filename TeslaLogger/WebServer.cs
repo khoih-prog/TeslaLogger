@@ -1,7 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using System.Net;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Web;
 using System.Web.Script.Serialization;
 
 namespace TeslaLogger
@@ -93,7 +91,7 @@ namespace TeslaLogger
                 Logfile.Log(ex.ToString());
             }
 
-            while (true)
+            while (listener != null)
             {
                 try
                 {
@@ -117,10 +115,14 @@ namespace TeslaLogger
                 HttpListenerRequest request = context.Request;
                 HttpListenerResponse response = context.Response;
 
-                if (request.Url.LocalPath == null)
-                    localpath = "NULL";
-                else
+                if (request.Url.LocalPath != null)
+                {
                     localpath = request.Url.LocalPath;
+                }
+                else
+                {
+                    localpath = "NULL";
+                }
 
                 switch (true)
                 {
@@ -156,10 +158,17 @@ namespace TeslaLogger
                         break;
                     // Tesla API debug
                     case bool _ when Regex.IsMatch(request.Url.LocalPath, @"/debug/TeslaAPI/[0-9]+/.+"):
-                        Debug_TeslaAPI(request.Url.LocalPath, request, response);
+                        Debug_TeslaAPI(request, response);
                         break;
                     case bool _ when request.Url.LocalPath.Equals("/debug/TeslaLogger/states"):
                         Debug_TeslaLoggerStates(request, response);
+                        break;
+                    // developer features
+                    case bool _ when request.Url.LocalPath.Equals("/dev/dumpJSON/on"):
+                        Dev_DumpJSON(response, true);
+                        break;
+                    case bool _ when request.Url.LocalPath.Equals("/dev/dumpJSON/off"):
+                        Dev_DumpJSON(response, false);
                         break;
                     default:
                         response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -172,6 +181,15 @@ namespace TeslaLogger
             {
                 Logfile.Log($"Localpath: {localpath}\r\n" + ex.ToString());
             }
+        }
+
+        private void Dev_DumpJSON(HttpListenerResponse response, bool v)
+        {
+            foreach (Car car in Car.allcars)
+            {
+                car.GetTeslaAPIState().DumpJSON = v;
+            }
+            WriteString(response, $"DumpJSON {v}");
         }
 
         private void SendCarCommand(HttpListenerRequest request, HttpListenerResponse response)
@@ -189,7 +207,7 @@ namespace TeslaLogger
                         // check if command is in list of allowed commands
                         if (AllowedTeslaAPICommands.Contains(command))
                         {
-                            switch(command)
+                            switch (command)
                             {
                                 case "auto_conditioning_start":
                                     WriteString(response, car.webhelper.PostCommand("command/auto_conditioning_start", null).Result);
@@ -222,6 +240,9 @@ namespace TeslaLogger
                                     {
                                         WriteString(response, car.webhelper.PostCommand("command/set_sentry_mode", "{\"on\":true}", true).Result);
                                     }
+                                    break;
+                                default:
+                                    WriteString(response, "");
                                     break;
                             }
                         }
@@ -281,7 +302,7 @@ namespace TeslaLogger
                     {
                         con.Open();
 
-                        MySqlCommand cmd = new MySqlCommand("update cars set tesla_name=@tesla_name, tesla_password=@tesla_password, tesla_carid=@ where id=@id", con);
+                        MySqlCommand cmd = new MySqlCommand("update cars set tesla_name=@tesla_name, tesla_password=@tesla_password, tesla_carid=@tesla_carid where id=@id", con);
                         cmd.Parameters.AddWithValue("@id", dbID);
                         cmd.Parameters.AddWithValue("@tesla_name", email);
                         cmd.Parameters.AddWithValue("@tesla_password", password);
@@ -327,7 +348,7 @@ namespace TeslaLogger
                             }
                             else
                             {
-                                response.AddHeader("Content-Type", "application/json");
+                                response.AddHeader("Content-Type", "application/json; charset=utf-8");
                                 WriteString(response, "{\"response\":{ \"value\":\"" + state[TeslaAPIState.Key.Value].ToString() + "\", \"timestamp\":" + state[TeslaAPIState.Key.Timestamp] + "} }");
                                 return;
                             }
@@ -425,7 +446,7 @@ namespace TeslaLogger
             WriteString(response, "<html><head></head><body><table>" + string.Concat(trs) + "</table></body></html>");
         }
 
-        private void Debug_TeslaAPI(string path, HttpListenerRequest request, HttpListenerResponse response)
+        private void Debug_TeslaAPI(HttpListenerRequest request, HttpListenerResponse response)
         {
             Match m = Regex.Match(request.Url.LocalPath, @"/debug/TeslaAPI/([0-9]+)/(.+)");
             if (m.Success && m.Groups.Count == 3 && m.Groups[1].Captures.Count == 1 && m.Groups[2].Captures.Count == 1)
@@ -437,7 +458,7 @@ namespace TeslaLogger
                     Car car = Car.GetCarByID(CarID);
                     if (car != null && car.GetWebHelper().TeslaAPI_Commands.TryGetValue(value, out string TeslaAPIJSON))
                     {
-                        response.AddHeader("Content-Type", "application/json");
+                        response.AddHeader("Content-Type", "application/json; charset=utf-8");
                         WriteString(response, TeslaAPIJSON);
                     }
                     else
@@ -588,6 +609,8 @@ namespace TeslaLogger
                             case "lng":
                                 double.TryParse(request.QueryString.GetValues(key)[0], out lng);
                                 break;
+                            default:
+                                break;
                         }
                     }
                 }
@@ -612,7 +635,7 @@ namespace TeslaLogger
                             specialflags.Add(flag.Key.ToString(), flag.Value);
                         }
                         data.Add("SpecialFlags", specialflags);
-                        response.AddHeader("Content-Type", "application/json");
+                        response.AddHeader("Content-Type", "application/json; charset=utf-8");
                         WriteString(response, new JavaScriptSerializer().Serialize(data));
                         return;
                     }
