@@ -1,4 +1,8 @@
 # Version 1.63.11
+- Power will be calculated from PackCurrent and PackVoltage from Fleet Telemetry
+- BF: Share Degradation
+
+# Version 1.63.11
 - BF: Cleanup Backup folder on Raspberry
 - Settings: Bar / PSI
 - Automatic switch to .NET 8 on Raspberry Pi installations
