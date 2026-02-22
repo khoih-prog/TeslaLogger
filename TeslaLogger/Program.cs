@@ -408,6 +408,12 @@ namespace TeslaLogger
         private static void InitStage2()
         {
             TestEncryption();
+            Logfile.Log("Path of settings.json: " + FileManager.GetFilePath(TLFilename.SettingsFilename));
+            Logfile.Log("Path of invoices: " + FileManager.GetInvoicePath());
+            Logfile.Log("Path of nohup.out: " + FileManager.GetLogfilePath());
+            Logfile.Log("Path of backup folder: " + FileManager.GetBackupPath());
+            Logfile.Log("Path of Map Cache: " + FileManager.GetMapCachePath());
+            Logfile.Log("Path of SRTM Data: " + FileManager.GetSRTMDataPath());
 
             KeepOnlineMinAfterUsage = Tools.GetSettingsInt("KeepOnlineMinAfterUsage", ApplicationSettings.Default.KeepOnlineMinAfterUsage);
             SuspendAPIMinutes = Tools.GetSettingsInt("SuspendAPIMinutes", ApplicationSettings.Default.SuspendAPIMinutes);

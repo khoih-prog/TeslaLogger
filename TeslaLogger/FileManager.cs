@@ -168,6 +168,9 @@ namespace TeslaLogger
         internal static string GetSRTMDataPath()
         {
             string path = Path.Combine(GetExecutingPath(), "SRTM-Data");
+            if (Tools.IsDockerNET8())
+                path = "/etc/teslalogger/data/SRTM-Data";
+
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
@@ -179,6 +182,9 @@ namespace TeslaLogger
         internal static string GetMapCachePath()
         {
             string path = Path.Combine(GetExecutingPath(), "MAP-Data");
+            if (Tools.IsDockerNET8())
+                path = "/etc/teslalogger/data/MAP-Data";
+
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
