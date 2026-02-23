@@ -1,5 +1,6 @@
 # Version 1.63.11
 - Power will be calculated from PackCurrent and PackVoltage from Fleet Telemetry
+- Support for Model 3 LR RWD 2025
 - BF: Share Degradation
 
 # Version 1.63.11
